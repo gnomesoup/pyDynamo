@@ -28,7 +28,6 @@ class FamilyOptions(IFamilyLoadOptions):
 	def OnFamilyFound(self, familyInUse, overwriteParameterValues):
 		overwriteParameterValues = True
 		return True
-
 	def OnSharedFamilyFound(self, sharedFamily, familyInUse, source, overwriteParameterValues):
 		overwriteParameterValues = True
 		return True
