@@ -18,73 +18,64 @@ parameterNames = IN[0]
 if not isinstance(parameterNames, list):
     parameterNames = [parameterNames]
 
-categories = IN[0]
+parameterCategories = IN[1]
 # Check if categories is a list
-if not isinstance(categories, list):
-    categories = [categories]
+if not isinstance(parameterCategories, list):
+    categories = [parameterCategories]
+
+sharedParameterGroup = IN[2]
+
+sharedParameterFile = IN[3]
 
 outList = []
 
-def dySetParameter(parameter, parameterValue):
-    ## Set the value of a parameter and return true.
-    ## Return false if it fails.
-    try:
-        TransactionManager.Instance.EnsureInTransaction(doc)
-        parameter.Set(parameterValue)
-        TransactionManager.Instance.TransactionTaskDone()
-        return True
-    except:
-        return False
 
-def dyCreateParameter(doc, parameterName):
+def dyCreateParameter(doc, parameterName, parameterCategories, parameterGroup, tempSharedParameterFile):
     ## Add a shared parameter if it doesn't exist otherwise
     ## Return true if succeeded
     ## Return false on fail
     try:
         app = doc.Application
-        tempSharedParamFile = "S:\\01 BIM\\Support\\WHA Shared Parameters.txt"
+        # tempSharedParamFile = "S:\\01 BIM\\Support\\WHA Shared Parameters.txt"
         # Set the parameter to shared file
-        originalSharedParamFile = app.SharedParametersFilename
-        app.SharedParametersFilename = tempSharedParamFile
+        if tempSharedParameterFile:
+            originalSharedParamFile = app.SharedParametersFilename
+            app.SharedParametersFilename = tempSharedParamFile
         sharedParamFile = app.OpenSharedParameterFile()
         # Drill down to the group
-        groupName = sharedParamFile.Groups.get_Item("Project Information")
+        groupName = sharedParamFile.Groups.get_Item(parameterGroup)
         # Get shared parameter from group
         externalDefinition = groupName.Definitions.get_Item(parameterName)
-        categories = doc.Settings.Categories
-        category = categories.get_Item(BuiltInCategory.OST_ProjectInformation)
+        # categories = doc.Settings.Categories
+        # category = categories.get_Item(BuiltInCategory.OST_ProjectInformation)
         TransactionManager.Instance.EnsureInTransaction(doc)
         categorySet = app.Create.NewCategorySet()
-        categorySet.Insert(category)
-        newInstanceBinding = app.Create.NewInstanceBinding(categorySet)
-        doc.ParameterBindings.Insert(externalDefinition,
+        for category in parameterCategories:
+            categorySet.Insert(UnwrapElement(category))
+        if doc.IsFamilyDocument:
+            familyManager = doc.FamilyManager
+            newParameter = familyManager.AddParameter(externalDefinition,
+                                                      BuiltInParameterGroup.PG_GEOMETRY,
+                                                      False)
+        else:
+            newInstanceBinding = app.Create.NewInstanceBinding(categorySet)
+            newParameter = doc.ParameterBindings.Insert(externalDefinition,
                                     newInstanceBinding,
                                     BuiltInParameterGroup.PG_IDENTITY_DATA)
-        app.SharedParametersFilename = tempSharedParamFile
+        if tempSharedParameterFile:
+            app.SharedParametersFilename = originalSharedParamFile
         TransactionManager.Instance.TransactionTaskDone()
-        return True
-    except:
-        return False
+        return newParameter
+    except Exception, e:
+        return e
 
-
-for element in UnwrapElement(elements):
+for name, categories in zip(parameterNames, parameterCategories):
+    if not isinstance(categories, list):
+        categories = [categories]
+    newParameter = dyCreateParameter(doc, name, categories, sharedParameterGroup, sharedParameterFile)
     try:
-        # Find if parameter exists
-        parameter = element.LookupParameter(parameterName)
-        if not parameter:
-            # Create the parameter
-            dyCreateParameter(doc, parameterName)
-            parameter = element.LookupParameter(parameterName)
-        # Get the value of the parameter
-        parameterValue = parameter.AsString()
-        if not parameterValue or parameterUpdate:
-            parameterValue = filePath
-            dySetParameter(parameter, parameterValue)
-        pList.append(parameterValue)
+        outList.append(newParameter.ToDSType(True))
     except:
-        pList.append("Error")
-    eList.append(element)
-# Place your code below this line
+        outList.append(newParameter.Definition.Name)
 
-# Assign your output to the OUT variable.
-OUT = pList
+OUT = outList

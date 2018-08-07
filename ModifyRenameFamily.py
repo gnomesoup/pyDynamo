@@ -25,7 +25,7 @@ for family, newName  in zip(families, newNames):
     try:
         family.Name = newName
         outList.append(family)
-    except:
+    except Exception, e:
         outList.append("Family does not exist")
 
 TransactionManager.Instance.TransactionTaskDone()

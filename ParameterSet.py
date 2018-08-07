@@ -10,7 +10,7 @@ from Autodesk.Revit.UI import *
 clr.AddReference('RevitServices')
 import RevitServices
 from RevitServices.Persistence import DocumentManager
-from RevitServices.Transactions import TransactionManager 
+from RevitServices.Transactions import TransactionManager
 
 clr.AddReference('ProtoGeometry')
 from Autodesk.DesignScript.Geometry import *
@@ -22,14 +22,22 @@ uiapp = DocumentManager.Instance.CurrentUIApplication
 app = uiapp.Application
 
 elements = IN[0]
-
+parameterValues = IN[1]
+parameterName = IN[2]
 
 outList = []
-familyType = []
 
-for i in UnwrapElement(elements):
-    p = i.LookupParameter("APZ Status")
+for element, value in zip(UnwrapElement(elements), parameterValues):
+    p = element.LookupParameter(parameterName)
     TransactionManager.Instance.EnsureInTransaction(doc)
-    p.Set("Setting a Parameter")
+    try:
+        p.Set(value)
+        try:
+            outList.append(element.ToDSType(True))
+        except:
+            outList.append(element)
+    except Exception, e:
+        outList.append(e)
     TransactionManager.Instance.TransactionTaskDone()
 
+OUT = outList
