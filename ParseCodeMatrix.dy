@@ -1,0 +1,28 @@
+dataRows = IN[0]
+linesToSkip = IN[1]
+if isinstance(linesToSkip, list):
+	linesToSkip = linesToSkip[0]
+
+headerPrefix = IN[2]
+if isinstance(headerPrefix, list):
+	headerPrefix = headerPrefix[0]
+
+outList = []
+
+dataRows = dataRows[linesToSkip:len(dataRows)]
+
+group = ""
+groupSort = 0
+sortOrder = 0
+for row in dataRows:
+        if row[0] and (row[0]).startswith(headerPrefix):
+                group = row[0]
+                groupSort = groupSort + 1
+        else:
+                sortOrder = sortOrder + 1
+                for index in range(len(row)):
+                        if row[index] is None:
+                                row[index] = ""
+                outList.append([group, groupSort, sortOrder] + row)
+
+OUT = outList
