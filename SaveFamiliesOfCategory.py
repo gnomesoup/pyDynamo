@@ -36,6 +36,7 @@ for family in collector:
 for element in elements:
     eName = element.Name
     famPath = docPath + eName + ".rfa"
+    famPathBackup = docPath + eName + ".0001.rfa"
     if saveBool:
         try:
             if File.Exists(famPath):
@@ -44,7 +45,9 @@ for element in elements:
             famDoc.SaveAs(famPath)
             famDoc.Close(True)
             outList.append(famPath)
-        except Exception, exception:
+            if File.Exists(famPathBackup):
+                File.Delete(famPathBackup)
+        except exception in Exception:
             outList.append(eName + ": " + str(exception))
     else:
         outList.append("Test: " + famPath)
