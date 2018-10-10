@@ -39,7 +39,9 @@ paths = IN[1]
 if not isinstance(paths, list):
     paths = [paths]
 
+TransactionManager.Instance.EnsureInTransaction
 for link, path in zip(cadLinks, paths):
     outList.append(reload(link, path))
+TransactionManager.Instance.TransactionTaskDone
 
 OUT = outList
