@@ -12,9 +12,9 @@ doc = DocumentManager.Instance.CurrentDBDocument
 areaSchemes = IN[0]
 method = IN[1]
 if not method:
-    method = "method = false"
+    method = "A"
 elif method not in ["A", "B"]:
-    method = "method not in list"
+    method = "B"
 
 if not isinstance(areaSchemes, list):
     areaSchemes = [areaSchemes]
@@ -44,32 +44,43 @@ class areaCalcArea():
         self.RowNumber = None
         self.SectionStartRow = None
         self.SectionEndRow = None
-    def ByRevitArea(self, revitArea):
+    def ByRevitArea(self, method, revitArea):
         self.Name = revitArea.GetParameters("Name")[0].AsString()
         self.Number = revitArea.Number.ToString()
         self.Area = round(revitArea.Area, 2)
         self.Level = revitArea.Level.Name
         self.AreaType = revitArea.GetParameters("Area Calc")[0].AsString()
+
+        # Check for major verticals
         if self.AreaType == "Major Vertical Penetration":
             self.Exclusion = self.Area
             self.Name = "MAJOR VERTICAL PENETRATION"
             self.Sort = 3
+        # Check for exclusions
         elif (self.AreaType == "Storage" or
             self.AreaType == "Occupant Storage Area" or
             self.AreaType == "Parking Area" or
             self.AreaType == "Parking" or
-            self.AreaType == "Building Amenity Area" or
             self.AreaType == "Unenclosed Building Feature"):
             self.Exclusion = self.Area
             self.Sort = 2
-        else:
-            self.Exclusion = 0
-        if (self.AreaType == "Tenant Area" or
+
+        # Check for amenity space. We need to handle this differently per method
+        elif self.AreaType == "Building Amenity Area":
+            if method == "A":
+                self.Amenity = self.Area
+            else:
+                self.Exclusion = self.Area
+
+        # Check for building service areas. This is only required for Method A
+        elif (method == "A" and self.AreaType == "Building Service Area"):
+            self.BuildingService = self.Area
+
+        # Check for tenant space
+        elif (self.AreaType == "Tenant Area" or
             self.AreaType == "Occupant Area"):
             self.Tenant = self.Area
-        else:
-            self.Tenant = 0
-        if (self.AreaType == "Tenant Ancillary Area"):
+        elif (self.AreaType == "Tenant Ancillary Area"):
             self.Ancillary = self.Area
         else:
             self.Ancillary = 0
@@ -90,11 +101,17 @@ class areaCalcArea():
             self.Circulation = self.Circulation + addArea.Circulation
         if addArea.Exclusion > 0:
             self.Exclusion = self.Exclusion + addArea.Exclusion
+        if addArea.Amenity > 0:
+            self.Amenity = self.Amenity + addArea.Amenity
+        if addArea.BuildingService > 0:
+            self.BuildingService = self.BuildingService + addArea.BuildingService
     def ItemizeCheck(self):
         if (self.Area <= 0 or
             (self.Ancillary <= 0 and
              self.Tenant <= 0 and
              self.Exclusion <= 0 and
+             self.Amenity <= 0 and
+             self.BuildingService <= 0 and
              self.AreaType != "Total")):
             return False
         else:
@@ -132,7 +149,7 @@ class areaCalcArea():
                         self.Area,                                                                           #B
                         "=SUBTOTAL(9,C" + str(sNum)+ ":C" + str(rNum - 1) + ")",                             #C
                         "=B" + str(rNum) + "-C" + str(rNum),                                                 #D
-                        "--",                                                                                #E
+                        "",                                                                                  #E
                         "=SUBTOTAL(9,F" + str(sNum) + ":F" + str(rNum - 1) + ")",                            #F
                         "=SUBTOTAL(9,G" + str(sNum) + ":G" + str(rNum - 1) + ")",                            #G
                         "=F" + str(rNum) + "+G" + str(rNum),                                                 #H
@@ -142,7 +159,7 @@ class areaCalcArea():
                         "=D" + str(rNum) + "-J" + str(rNum) + "-K" + str(rNum),                              #L
                         "=ROUND((J" + str(rNum) + "+L" + str(rNum) + ")/J" + str(rNum) + ",4)",              #M
                         "=ROUND(H" + str(rNum) + "*M" + str(rNum) + ",2)",                                   #N
-                        "=ROUND(I" + str(rNum) + "*M" + str(rNum) + ")+K" + str(rNum) + ",2)",               #O
+                        "=ROUND(I" + str(rNum) + "*M" + str(rNum) + ",2)+K" + str(rNum),                     #O
                         "=ROUND(D$" + str(lastRow) + "/(D$" + str(lastRow) +  "-O$" + str(lastRow) + "),4)", #P
                         "=ROUND(N" + str(rNum) + "*P" + str(rNum) + ",2)",                                   #Q
                         "--"]                                                                                #R
@@ -165,8 +182,7 @@ class areaCalcArea():
                         "",                                                                                              #L
                         "=ROUND((J$" + str(eNum) + "+L$" + str(eNum) + ")/J$" + str(eNum) + ", 4)",                      #M
                         "=IF(COUNTIF(H" + str(rNum) + ",\">0\"),ROUND(H" + str(rNum) + "*M" + str(rNum) + ",2),\"--\")", #N
-                        "=IF(COUNTIF(I" + str(rNum) + ",\">0\"),ROUND(K" + str(rNum) + "*M,2),0)+IF(COUNTIF(K" + str(rNum) + ",\">0\"),K" + str(rNum) + ",0)", #O
-                        # "=IF(OR(COUNTIF(I" + str(rNum) + ",\">0\"),COUNTIF(K" + str(rNum) + ",\">0\")),ROUND((I" + str(rNum) + "*M" + str(rNum) + ")+K" + str(rNum) + ",2), \"--\")",                                        #O
+                        "=IF(COUNTIF(I" + str(rNum) + ",\">0\"),ROUND(I" + str(rNum) + "*M" + str(rNum) + ",2),0)+IF(COUNTIF(K" + str(rNum) + ",\">0\"),K" + str(rNum) + ",0)", #O
                         "=ROUND(D$" + str(lastRow) + "/(D$" + str(lastRow) + "-O$" + str(lastRow) + "),4)",              #P
                         "=IF(COUNTIF(H" + str(rNum) + ",\">0\"),ROUND(N" + str(rNum) + "*P" + str(rNum) + ",2),\"--\")", #Q
                         "=IF(COUNTIF(Q" + str(rNum) + ",\">0\"),ROUND(Q" + str(rNum) + "/H" + str(rNum) + ",4),\"--\")"] #R
@@ -292,24 +308,24 @@ class areaCalcArea():
     def GrandTotal(method, firstRow, row):
         # TODO build Method A total row. This is just pasted from method B
         if method == "A":
-            totalRow = ["Building Totals (Σ)",                                         #A
-                        "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",          #B
-                        "=SUBTOTAL(9,C" + str(firstRow) + ":C" + str(row - 1) + ")",   #C
-                        "=Sum(D" + str(firstRow) + ":D" + str(row - 1) + ")",          #D
-                        "",                                                            #E
-                        "=SUBTOTAL(9,F" + str(firstRow) + ":F" + str(row - 1) + ")",   #F
-                        "=SUBTOTAL(9,G" + str(firstRow) + ":G" + str(row - 1) + ")",   #G
-                        "=F" + str(row) + "+G" + str(row),                             #H
-                        "=SUBTOTAL(9, I" + str(firstRow) + ":I" + str(row - 1) + ")",  #I
-                        "=H" + str(row) + "+I" + str(row),                             #J
-                        "=SUBTOTAL(9, K" + str(firstRow) + ":K" + str(row - 1) + ")",  #K
-                        "=D" + str(row) + "-J" + str(row) + "-K" + str(row),           #L
-                        "=(J" + str(row) + "+L" + str(row) + ")/J" + str(row),         #M
-                        "=H" + str(row) + "*M" + str(row),                             #N
-                        "=(I" + str(row) + "*M" + str(row) + ")-K" + str(row),         #O
-                        "=D$" + str(row) + "/(D$" + str(row) + "-O$" + str(row) + ")", #P
-                        "=N" + str(row) + "*P" + str(row),                             #Q
-                        "=Q" + str(row) + "/H" + str(row)]                             #R
+            totalRow = ["Building Totals (Σ)",                                                  #A
+                        "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",                   #B
+                        "=SUBTOTAL(9,C" + str(firstRow) + ":C" + str(row - 1) + ")",            #C
+                        "=Sum(D" + str(firstRow) + ":D" + str(row - 1) + ")",                   #D
+                        "",                                                                     #E
+                        "=SUBTOTAL(9,F" + str(firstRow) + ":F" + str(row - 1) + ")",            #F
+                        "=SUBTOTAL(9,G" + str(firstRow) + ":G" + str(row - 1) + ")",            #G
+                        "=F" + str(row) + "+G" + str(row),                                      #H
+                        "=SUBTOTAL(9, I" + str(firstRow) + ":I" + str(row - 1) + ")",           #I
+                        "=H" + str(row) + "+I" + str(row),                                      #J
+                        "=SUBTOTAL(9, K" + str(firstRow) + ":K" + str(row - 1) + ")",           #K
+                        "=D" + str(row) + "-J" + str(row) + "-K" + str(row),                    #L
+                        "=(J" + str(row) + "+L" + str(row) + ")/J" + str(row),                  #M
+                        "=H" + str(row) + "*M" + str(row),                                      #N
+                        "=ROUND(I" + str(row) + "*M" + str(row) + ",2)+K" + str(row),           #O
+                        "=ROUND(D$" + str(row) + "/(D$" + str(row) + "-O$" + str(row) + "),4)", #P
+                        "=ROUND(N" + str(row) + "*P" + str(row) + ",2)",                        #Q
+                        "=ROUND(Q" + str(row) + "/H" + str(row) + ",4)"]                        #R
         elif method == "B":
             totalRow = ["Building Totals (Σ)",                                       #A
                         "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",        #B
@@ -361,7 +377,7 @@ for areaScheme in areaSchemes:
                 try:
                     # create an area object for the matching area
                     parsedArea = areaCalcArea()
-                    parsedArea.ByRevitArea(area)
+                    parsedArea.ByRevitArea(method, area)
                     # add it to the area total for the level
                     levelTotal.AddAreas(parsedArea)
                     # add the matched area to the list of areas
@@ -388,17 +404,20 @@ for areaScheme in areaSchemes:
         joinedAreas = sorted(joinedAreas.values(), key = lambda x: x.Name)
         joinedAreas.sort(key = lambda x: x.Sort)
         sectionStartRow = row
-        for area in joinedAreas:
-            if area.ItemizeCheck():
-                area.RowNumber = row
-                sectionEndRow = row
-                row = row + 1
-                if area.AreaType == "Total":
-                    area.SectionStartRow = sectionStartRow
-                    sectionStartRow = row
-                schemeAreas.append(area)
-        for x, area in enumerate(schemeAreas):
-            (schemeAreas[x]).SectionEndRow = sectionEndRow
+        # remove areas that don't get listed out
+        for num, area in enumerate(joinedAreas):
+            if not area.ItemizeCheck():
+                joinedAreas.pop(num)
+        for num, area in enumerate(joinedAreas):
+            (joinedAreas[num]).RowNumber = row
+            sectionEndRow = row
+            row = row + 1
+            if area.AreaType == "Total":
+                (joinedAreas[num]).SectionStartRow = sectionStartRow
+                sectionStartRow = row
+        for num, area in enumerate(joinedAreas):
+            (joinedAreas[num]).SectionEndRow = sectionEndRow
+        schemeAreas.extend(joinedAreas)
         #% End Level Loop %#
 
     # Go through all the collected areas and build the rows for the excel doc
