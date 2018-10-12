@@ -11,6 +11,10 @@ doc = DocumentManager.Instance.CurrentDBDocument
 
 areaSchemes = IN[0]
 method = IN[1]
+if not method:
+    method = "method = false"
+elif method not in ["A", "B"]:
+    method = "method not in list"
 
 if not isinstance(areaSchemes, list):
     areaSchemes = [areaSchemes]
@@ -39,6 +43,7 @@ class areaCalcArea():
         self.Sort = 0
         self.RowNumber = None
         self.SectionStartRow = None
+        self.SectionEndRow = None
     def ByRevitArea(self, revitArea):
         self.Name = revitArea.GetParameters("Name")[0].AsString()
         self.Number = revitArea.Number.ToString()
@@ -104,67 +109,67 @@ class areaCalcArea():
                 self.Tenant,
                 self.Ancillary,
                 self.Circulation]
+    def ZeroToDashes(self):
+        if self.Exclusion <= 0:
+            self.Exclusion = "--"
+        if self.Tenant <= 0:
+            self.Tenant = "--"
+        if self.Ancillary <= 0:
+            self.Ancillary = "--"
+        if self.Circulation <= 0:
+            self.Circulation = "--"
+        if self.Amenity <= 0:
+            self.Amenity = "--"
+        if self.Tenant <= 0:
+            self.Tenant = "--"
+
     def MakeRow(self, method, lastRow):
         if method == "A":
             if self.AreaType == "Total":
-                # if self.Circulation <= 0:
-                #     circulation = ""
-                # else:
-                #     circulation = self.Circulation
-                return ["Floor Totals",                                                                          #A
-                        self.Area,                                                                               #B
-                        "=SUBTOTAL(9,C" + str(self.SectionStartRow)+ ":C" + str(self.RowNumber - 1) + ")",       #C
-                        "=B" + str(self.RowNumber) + "-C" + str(self.RowNumber),                                 #D
-                        "",                                                                                      #E
-                        "=SUBTOTAL(9,F" + str(self.SectionStartRow) + ":F" + str(self.RowNumber - 1) + ")",      #F
-                        "=SUBTOTAL(9,G" + str(self.SectionStartRow) + ":G" + str(self.RowNumber - 1) + ")",      #G
-                        "=F" + str(self.RowNumber) + "+G" + str(self.RowNumber),                                 #H
-                        "=SUBTOTAL(9,I" + str(self.SectionStartRow) + ":I" + str(self.RowNumber - 1) + ")",      #I
-                        "=H" + str(self.RowNumber) + "+I" + str(self.RowNumber),                                 #J
-                        "=SUBTOTAL(9,K" + str(self.SectionStartRow) + ":K" + str(self.RowNumber - 1) + ")",      #K
-                        "=D" + str(self.RowNumber) + "-J" + str(self.RowNumber) + "-K" + str(self.RowNumber),    #L
-                        "=(J" + str(self.RowNumber) + "+L" + str(self.RowNumber) + ")/J" + str(lastRow),         #M
-                        "=H" + str(self.RowNumber) + "*M" + str(self.RowNumber),                                 #N
-                        "=(I" + str(self.RowNumber) + "*M" + str(self.RowNumber) + ")+K" + str(lastRow),         #O
-                        "=D$" + str(lastRow) + "/(D$" + str(lastRow) +  "-O$" + str(lastRow) + ")",              #P
-                        "=N" + str(self.RowNumber) + "*P" + str(self.RowNumber),                                 #Q
-                        ""]                                                                                      #R
+                rNum = self.RowNumber
+                sNum = self.SectionStartRow
+                return ["Floor Totals",                                                                      #A
+                        self.Area,                                                                           #B
+                        "=SUBTOTAL(9,C" + str(sNum)+ ":C" + str(rNum - 1) + ")",                             #C
+                        "=B" + str(rNum) + "-C" + str(rNum),                                                 #D
+                        "--",                                                                                #E
+                        "=SUBTOTAL(9,F" + str(sNum) + ":F" + str(rNum - 1) + ")",                            #F
+                        "=SUBTOTAL(9,G" + str(sNum) + ":G" + str(rNum - 1) + ")",                            #G
+                        "=F" + str(rNum) + "+G" + str(rNum),                                                 #H
+                        "=SUBTOTAL(9,I" + str(sNum) + ":I" + str(rNum - 1) + ")",                            #I
+                        "=H" + str(rNum) + "+I" + str(rNum),                                                 #J
+                        "=SUBTOTAL(9,K" + str(sNum) + ":K" + str(rNum - 1) + ")",                            #K
+                        "=D" + str(rNum) + "-J" + str(rNum) + "-K" + str(rNum),                              #L
+                        "=ROUND((J" + str(rNum) + "+L" + str(rNum) + ")/J" + str(rNum) + ",4)",              #M
+                        "=ROUND(H" + str(rNum) + "*M" + str(rNum) + ",2)",                                   #N
+                        "=ROUND(I" + str(rNum) + "*M" + str(rNum) + ")+K" + str(rNum) + ",2)",               #O
+                        "=ROUND(D$" + str(lastRow) + "/(D$" + str(lastRow) +  "-O$" + str(lastRow) + "),4)", #P
+                        "=ROUND(N" + str(rNum) + "*P" + str(rNum) + ",2)",                                   #Q
+                        "--"]                                                                                #R
             else:
-                if self.Exclusion <= 0:
-                    exclusion = ""
-                else:
-                    exclusion = self.Exclusion
-                if self.Tenant <= 0:
-                    tenant = ""
-                else:
-                    tenant = self.Tenant
-                if self.Ancillary <= 0:
-                    ancillary = ""
-                else:
-                    ancillary = self.Ancillary
-                if self.Circulation <= 0:
-                    circulation = ""
-                else:
-                    circulation = self.Circulation
-                if self.Amenity <= 0:
-                    amenity = ""
-                else:
-                    amenity = self.Amenity
-
-                    return [self.Level,
-                            "",
-                            exclusion,
-                            "",
-                            self.Name,
-                            tenant,
-                            ancillary,
-                            "=F" + str(self.RowNumber) + "+G" + str(self.RowNumber),
-                            amenity,
-                            "=H" + str(self.RowNumber) + "+I" + str(self.RowNumber),
-                            "",
-                            circulation,
-                            "=D$" + str(lastRow) + "/H$" + str(lastRow),
-                            "=H" + str(self.RowNumber) + "*K" + str(self.RowNumber)]
+                self.ZeroToDashes()
+                # TODO redo for method A. This is method b
+                rNum = self.RowNumber
+                eNum = self.SectionEndRow
+                return [self.Level,                                                                                      #A
+                        "",                                                                                              #B
+                        self.Exclusion,                                                                                  #C
+                        "",                                                                                              #D
+                        self.Name,                                                                                       #E
+                        self.Tenant,                                                                                     #F
+                        self.Ancillary,                                                                                  #G
+                        "=SUMIF(F" + str(rNum) + ":G" + str(rNum) + ",\">0\")",                                          #H
+                        self.Amenity,                                                                                    #I
+                        "=SUMIF(H" + str(rNum) + ":I" + str(rNum) + ",\">0\")",                                          #J
+                        self.BuildingService,                                                                            #K
+                        "",                                                                                              #L
+                        "=ROUND((J$" + str(eNum) + "+L$" + str(eNum) + ")/J$" + str(eNum) + ", 4)",                      #M
+                        "=IF(COUNTIF(H" + str(rNum) + ",\">0\"),ROUND(H" + str(rNum) + "*M" + str(rNum) + ",2),\"--\")", #N
+                        "=IF(COUNTIF(I" + str(rNum) + ",\">0\"),ROUND(K" + str(rNum) + "*M,2),0)+IF(COUNTIF(K" + str(rNum) + ",\">0\"),K" + str(rNum) + ",0)", #O
+                        # "=IF(OR(COUNTIF(I" + str(rNum) + ",\">0\"),COUNTIF(K" + str(rNum) + ",\">0\")),ROUND((I" + str(rNum) + "*M" + str(rNum) + ")+K" + str(rNum) + ",2), \"--\")",                                        #O
+                        "=ROUND(D$" + str(lastRow) + "/(D$" + str(lastRow) + "-O$" + str(lastRow) + "),4)",              #P
+                        "=IF(COUNTIF(H" + str(rNum) + ",\">0\"),ROUND(N" + str(rNum) + "*P" + str(rNum) + ",2),\"--\")", #Q
+                        "=IF(COUNTIF(Q" + str(rNum) + ",\">0\"),ROUND(Q" + str(rNum) + "/H" + str(rNum) + ",4),\"--\")"] #R
 
         elif method == "B":
             if self.AreaType == "Total":
@@ -172,21 +177,21 @@ class areaCalcArea():
                     circulation = ""
                 else:
                     circulation = self.Circulation
-                return ["Floor Totals",
-                        self.Area,
-                        "=SUBTOTAL(9,C" + str(self.SectionStartRow)+ ":C" + str(self.RowNumber - 1) + ")",
-                        "=B" + str(self.RowNumber) + "-C" + str(self.RowNumber),
-                        "",
-                        "=SUBTOTAL(9,F" + str(self.SectionStartRow) + ":F" + str(self.RowNumber - 1) + ")",
-                        "=SUBTOTAL(9,G" + str(self.SectionStartRow) + ":G" + str(self.RowNumber - 1) + ")",
-                        "=SUBTOTAL(9,H" + str(self.SectionStartRow) + ":H" + str(self.RowNumber - 1) + ")",
-                        circulation,
-                        "=D" + str(self.RowNumber) + "-H" + str(self.RowNumber) + "-I" + str(self.RowNumber),
-                        "=D$" + str(lastRow) + "/H$" + str(lastRow),
-                        "=H" + str(self.RowNumber) + "*K" + str(self.RowNumber)]
+                return ["Floor Totals",                                                                       #A
+                        self.Area,                                                                            #B
+                        "=SUBTOTAL(9,C" + str(self.SectionStartRow)+ ":C" + str(self.RowNumber - 1) + ")",    #C
+                        "=B" + str(self.RowNumber) + "-C" + str(self.RowNumber),                              #D
+                        "--",                                                                                 #E
+                        "=SUBTOTAL(9,F" + str(self.SectionStartRow) + ":F" + str(self.RowNumber - 1) + ")",   #F
+                        "=SUBTOTAL(9,G" + str(self.SectionStartRow) + ":G" + str(self.RowNumber - 1) + ")",   #G
+                        "=SUBTOTAL(9,H" + str(self.SectionStartRow) + ":H" + str(self.RowNumber - 1) + ")",   #H
+                        circulation,                                                                          #I
+                        "=D" + str(self.RowNumber) + "-H" + str(self.RowNumber) + "-I" + str(self.RowNumber), #J
+                        "=D$" + str(lastRow) + "/H$" + str(lastRow),                                          #K
+                        "=H" + str(self.RowNumber) + "*K" + str(self.RowNumber)]                              #L
             else:
                 if self.Exclusion <= 0:
-                    exclusion = ""
+                    exclusion = "--"
                 else:
                     exclusion = self.Exclusion
                 if self.Tenant <= 0:
@@ -217,68 +222,68 @@ class areaCalcArea():
     def Header(method):
         if method == "A":
             header = [list("ABCDEFGHIJKLMNOPQR")]
-            header.append(["Input",
-                           "Input",
-                           "Input & ID",
-                           "'= B - C",
-                           "Input",
-                           "Input & ID",
-                           "Input & ID",
-                           "'= F + G",
-                           "Input & ID",
-                           "'= H + I",
-                           "Input & ID",
-                           "'= D - J - K",
-                           "'= (J + L) / J",
-                           "'= H * M",
-                           "'= (I * M) + K"
-                           "'= ΣD / (ΣH - ΣO)",
-                           "'= N * P",
-                           "'= Q / H"])
-            header.append(["Floor Level",
-                           "Boundary Area (IPMS 2)",
-                           "Rentable Exclusions",
-                           "Floor Rentable Area",
-                           "Space ID",
-                           "Tenant Area (IPMS 3)",
-                           "Tenant Ancillary Area",
-                           "Occupant Area",
-                           "Building Amenity Area",
-                           "Floor Usable Area",
-                           "Building Service Area",
-                           "Floor Service Area",
-                           "Floor Allocation Ratio",
-                           "Floor Allocation",
-                           "Building Service & Amenity Area",
-                           "Builing Allocation Ratio",
-                           "Rentable Area",
-                           "Load Factor A"])
+            header.append(["Input",             #A
+                           "Input",             #B
+                           "Input & ID",        #C
+                           "'= B - C",          #D
+                           "Input",             #E
+                           "Input & ID",        #F
+                           "Input & ID",        #G
+                           "'= F + G",          #H
+                           "Input & ID",        #I
+                           "'= H + I",          #J
+                           "Input & ID",        #K
+                           "'= D - J - K",      #L
+                           "'= (J + L) / J",    #M
+                           "'= H * M",          #N
+                           "'= (I * M) + K",    #O
+                           "'= ΣD / (ΣH - ΣO)", #P
+                           "'= N * P",          #Q
+                           "'= Q / H"])         #R
+            header.append(["Floor Level",                     #A
+                           "Boundary Area (IPMS 2)",          #B
+                           "Rentable Exclusions",             #C
+                           "Floor Rentable Area",             #D
+                           "Space ID",                        #E
+                           "Tenant Area (IPMS 3)",            #F
+                           "Tenant Ancillary Area",           #G
+                           "Occupant Area",                   #H
+                           "Building Amenity Area",           #I
+                           "Floor Usable Area",               #J
+                           "Building Service Area",           #K
+                           "Floor Service Area",              #L
+                           "Floor Allocation Ratio",          #M
+                           "Floor Allocation",                #N
+                           "Building Service & Amenity Area", #O
+                           "Builing Allocation Ratio",        #P
+                           "Rentable Area",                   #Q
+                           "Load Factor A"])                  #R
         elif method == "B":
             header = [list("ABCDEFGHIJKL")]
-            header.append(["Input",
-                           "Input",
-                           "Input & ID",
-                           "'= B - C",
-                           "Input",
-                           "Input & ID",
-                           "Input & ID",
-                           "'= F + G",
-                           "Input",
-                           "'= D - H - I",
-                           "'= ΣD / ΣH",
-                           "'= H * K"])
-            header.append(["Floor Level",
-                           "Boundary Area (IPMS 2)",
-                           "Rentable Exclusions",
-                           "Floor Rentable Area",
-                           "Space ID",
-                           "Tenant Area",
-                           "Tenant Ancillary Area",
-                           "Occupant Area",
-                           "Base Building Circulation",
-                           "Service & Amenity Area",
-                           "Load Factor B",
-                           "Rentable Area"])
+            header.append(["Input",        #A
+                           "Input",        #B
+                           "Input & ID",   #C
+                           "'= B - C",     #D
+                           "Input",        #E
+                           "Input & ID",   #F
+                           "Input & ID",   #G
+                           "'= F + G",     #H
+                           "Input",        #I
+                           "'= D - H - I", #J
+                           "'= ΣD / ΣH",   #K
+                           "'= H * K"])    #L
+            header.append(["Floor Level",               #A
+                           "Boundary Area (IPMS 2)",    #B
+                           "Rentable Exclusions",       #C
+                           "Floor Rentable Area",       #D
+                           "Space ID",                  #E
+                           "Tenant Area",               #F
+                           "Tenant Ancillary Area",     #G
+                           "Occupant Area",             #H
+                           "Base Building Circulation", #I
+                           "Service & Amenity Area",    #J
+                           "Load Factor B",             #K
+                           "Rentable Area"])            #L
         else:
             header = False
         return header
@@ -287,31 +292,37 @@ class areaCalcArea():
     def GrandTotal(method, firstRow, row):
         # TODO build Method A total row. This is just pasted from method B
         if method == "A":
-            totalRow = ["Building Totals (Σ)",
-                        "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",
-                        "=SUBTOTAL(9,C" + str(firstRow) + ":C" + str(row - 1) + ")",
-                        "=Sum(D" + str(firstRow) + ":D" + str(row - 1) + ")",
-                        "",
-                        "=SUBTOTAL(9,F" + str(firstRow) + ":F" + str(row - 1) + ")",
-                        "=SUBTOTAL(9,G" + str(firstRow) + ":G" + str(row - 1) + ")",
-                        "=F" + str(row) + "+G" + str(row),
-                        "=Sum(I" + str(firstRow) + ":I" + str(row - 1) + ")",
-                        "=D" + str(row) + "-H" + str(row) + "-I" + str(row),
-                        "=D$" + str(row) + "/H$" + str(row),
-                        "=H" + str(row) + "*K" + str(row)]
+            totalRow = ["Building Totals (Σ)",                                         #A
+                        "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",          #B
+                        "=SUBTOTAL(9,C" + str(firstRow) + ":C" + str(row - 1) + ")",   #C
+                        "=Sum(D" + str(firstRow) + ":D" + str(row - 1) + ")",          #D
+                        "",                                                            #E
+                        "=SUBTOTAL(9,F" + str(firstRow) + ":F" + str(row - 1) + ")",   #F
+                        "=SUBTOTAL(9,G" + str(firstRow) + ":G" + str(row - 1) + ")",   #G
+                        "=F" + str(row) + "+G" + str(row),                             #H
+                        "=SUBTOTAL(9, I" + str(firstRow) + ":I" + str(row - 1) + ")",  #I
+                        "=H" + str(row) + "+I" + str(row),                             #J
+                        "=SUBTOTAL(9, K" + str(firstRow) + ":K" + str(row - 1) + ")",  #K
+                        "=D" + str(row) + "-J" + str(row) + "-K" + str(row),           #L
+                        "=(J" + str(row) + "+L" + str(row) + ")/J" + str(row),         #M
+                        "=H" + str(row) + "*M" + str(row),                             #N
+                        "=(I" + str(row) + "*M" + str(row) + ")-K" + str(row),         #O
+                        "=D$" + str(row) + "/(D$" + str(row) + "-O$" + str(row) + ")", #P
+                        "=N" + str(row) + "*P" + str(row),                             #Q
+                        "=Q" + str(row) + "/H" + str(row)]                             #R
         elif method == "B":
-            totalRow = ["Building Totals (Σ)",
-                        "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",
-                        "=SUBTOTAL(9,C" + str(firstRow) + ":C" + str(row - 1) + ")",
-                        "=Sum(D" + str(firstRow) + ":D" + str(row - 1) + ")",
-                        "",
-                        "=SUBTOTAL(9,F" + str(firstRow) + ":F" + str(row - 1) + ")",
-                        "=SUBTOTAL(9,G" + str(firstRow) + ":G" + str(row - 1) + ")",
-                        "=F" + str(row) + "+G" + str(row),
-                        "=Sum(I" + str(firstRow) + ":I" + str(row - 1) + ")",
-                        "=D" + str(row) + "-H" + str(row) + "-I" + str(row),
-                        "=D$" + str(row) + "/H$" + str(row),
-                        "=H" + str(row) + "*K" + str(row)]
+            totalRow = ["Building Totals (Σ)",                                       #A
+                        "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",        #B
+                        "=SUBTOTAL(9,C" + str(firstRow) + ":C" + str(row - 1) + ")", #C
+                        "=Sum(D" + str(firstRow) + ":D" + str(row - 1) + ")",        #D
+                        "",                                                          #E
+                        "=SUBTOTAL(9,F" + str(firstRow) + ":F" + str(row - 1) + ")", #F
+                        "=SUBTOTAL(9,G" + str(firstRow) + ":G" + str(row - 1) + ")", #G
+                        "=F" + str(row) + "+G" + str(row),                           #H
+                        "=Sum(I" + str(firstRow) + ":I" + str(row - 1) + ")",        #I
+                        "=D" + str(row) + "-H" + str(row) + "-I" + str(row),         #J
+                        "=D$" + str(row) + "/H$" + str(row),                         #K
+                        "=H" + str(row) + "*K" + str(row)]                           #L
         else:
             totalRow = False
         return totalRow
@@ -380,17 +391,19 @@ for areaScheme in areaSchemes:
         for area in joinedAreas:
             if area.ItemizeCheck():
                 area.RowNumber = row
+                sectionEndRow = row
                 row = row + 1
                 if area.AreaType == "Total":
                     area.SectionStartRow = sectionStartRow
                     sectionStartRow = row
                 schemeAreas.append(area)
+        for x, area in enumerate(schemeAreas):
+            (schemeAreas[x]).SectionEndRow = sectionEndRow
         #% End Level Loop %#
 
     # Go through all the collected areas and build the rows for the excel doc
     for area in schemeAreas:
-        # TODO Allow for method A
-        schemeRows.append(area.MakeRowMethodB(row))
+        schemeRows.append(area.MakeRow(method, row))
 
     # add the grand total loop
     schemeRows.append(areaCalcArea.GrandTotal(method, firstRow, row))
