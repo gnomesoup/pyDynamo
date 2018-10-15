@@ -11,10 +11,13 @@ doc = DocumentManager.Instance.CurrentDBDocument
 
 areaSchemes = IN[0]
 method = IN[1]
-if not method:
-    method = "A"
-elif method not in ["A", "B"]:
-    method = "B"
+if not isinstance(list, methods):
+    methods = [methods]
+for num, method in enumerate(method):
+    if not method:
+        methods[num] = "A"
+    elif method not in ["A", "B"]:
+        methods[num] = "B"
 
 if not isinstance(areaSchemes, list):
     areaSchemes = [areaSchemes]
@@ -352,7 +355,7 @@ levels = [level.Name.ToString() for level in levels]
 
 ##!! Create the rows for the excel export !!##
 # loop through area schemes
-for areaScheme in areaSchemes:
+for areaScheme, method in zip(areaSchemes, method):
     schemeAreas = []
     # get excel header and setup the row numbering
     schemeRows = areaCalcArea.Header(method)
