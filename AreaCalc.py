@@ -28,7 +28,6 @@ if not isinstance(areaSchemes, list):
 outList = []
 
 class areaCalcArea():
-    # def __init__(self):
     def __init__(self,
                  name = "",
                  areaType = "",
@@ -112,13 +111,16 @@ class areaCalcArea():
         if addArea.BuildingService > 0:
             self.BuildingService = self.BuildingService + addArea.BuildingService
     def ItemizeCheck(self):
-        if (self.Area <= 0 or
-            (self.Ancillary <= 0 and
+        if self.Area <= 0:
+            return False
+        elif (self.AreaType is "Total" or
+            self.AreaType is "BLANK"):
+            return True
+        elif (self.Ancillary <= 0 and
              self.Tenant <= 0 and
              self.Exclusion <= 0 and
              self.Amenity <= 0 and
-             self.BuildingService <= 0 and
-             self.AreaType != "Total")):
+             self.BuildingService <= 0):
             return False
         else:
             return True
@@ -169,6 +171,13 @@ class areaCalcArea():
                         "=ROUND(D$" + str(lastRow) + "/(D$" + str(lastRow) +  "-O$" + str(lastRow) + "),4)", #P
                         "=ROUND(N" + str(rNum) + "*P" + str(rNum) + ",2)",                                   #Q
                         "--"]                                                                                #R
+
+            elif self.AreaType == "BLANK":
+                row = []
+                for i in range(18):
+                    row.append("")
+                return row
+
             else:
                 self.ZeroToDashes()
                 # TODO redo for method A. This is method b
@@ -211,6 +220,13 @@ class areaCalcArea():
                         "=D" + str(self.RowNumber) + "-H" + str(self.RowNumber) + "-I" + str(self.RowNumber), #J
                         "=D$" + str(lastRow) + "/H$" + str(lastRow),                                          #K
                         "=H" + str(self.RowNumber) + "*K" + str(self.RowNumber)]                              #L
+
+            elif self.AreaType == "BLANK":
+                row = []
+                for i in range(12):
+                    row.append("")
+                return row
+
             else:
                 if self.Exclusion <= 0:
                     exclusion = "--"
@@ -240,10 +256,12 @@ class areaCalcArea():
         else:
             return False
 
+
     @staticmethod
     def Header(method):
         if method == "A":
-            header = [list("ABCDEFGHIJKLMNOPQR")]
+            header = [["" for i in range(18)]]
+            header.append(list("ABCDEFGHIJKLMNOPQR"))
             header.append(["Input",             #A
                            "Input",             #B
                            "Input & ID",        #C
@@ -280,8 +298,11 @@ class areaCalcArea():
                            "Builing Allocation Ratio",        #P
                            "Rentable Area",                   #Q
                            "Load Factor A"])                  #R
+            header.append(["" for i in range(18)])
+
         elif method == "B":
-            header = [list("ABCDEFGHIJKL")]
+            header = [["" for i in range(12)]]
+            header.append(list("ABCDEFGHIJKL"))
             header.append(["Input",        #A
                            "Input",        #B
                            "Input & ID",   #C
@@ -306,14 +327,16 @@ class areaCalcArea():
                            "Service & Amenity Area",    #J
                            "Load Factor B",             #K
                            "Rentable Area"])            #L
+            header.append(["" for i in range(12)])
+
         else:
             header = False
         return header
 
     @staticmethod
     def GrandTotal(method, firstRow, row):
-        # TODO build Method A total row. This is just pasted from method B
         if method == "A":
+            # blankRow = ["" for i in range(18)]
             totalRow = ["Building Totals (Σ)",                                                  #A
                         "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",                   #B
                         "=SUBTOTAL(9,C" + str(firstRow) + ":C" + str(row - 1) + ")",            #C
@@ -333,6 +356,7 @@ class areaCalcArea():
                         "=ROUND(N" + str(row) + "*P" + str(row) + ",2)",                        #Q
                         "=ROUND(Q" + str(row) + "/H" + str(row) + ",4)"]                        #R
         elif method == "B":
+            # blankRow = ["" for i in range(12)]
             totalRow = ["Building Totals (Σ)",                                       #A
                         "=Sum(B" + str(firstRow) + ":B" + str(row - 1) + ")",        #B
                         "=SUBTOTAL(9,C" + str(firstRow) + ":C" + str(row - 1) + ")", #C
@@ -346,8 +370,9 @@ class areaCalcArea():
                         "=D$" + str(row) + "/H$" + str(row),                         #K
                         "=H" + str(row) + "*K" + str(row)]                           #L
         else:
-            totalRow = False
-        return totalRow
+            # totalRow = False
+            blankRow = False
+        return [totalRow]
 
 # Collect all areas in the model
 filter = AreaFilter()
@@ -362,7 +387,7 @@ for areaScheme, method in zip(areaSchemes, methods):
     schemeAreas = []
     # get excel header and setup the row numbering
     schemeRows = areaCalcArea.Header(method)
-    row = 4
+    row = 6
     firstRow = row
 
     # loop through the levels
@@ -374,6 +399,8 @@ for areaScheme, method in zip(areaSchemes, methods):
         levelTotal = areaCalcArea(level, "Total", level)
         # add a high sort number to place it at the end of the list later
         levelTotal.Sort = 4
+        levelBlank = (areaCalcArea("", "BLANK", ""))
+        levelBlank.Sort = 5
 
         # loop through all the areas
         for area in areas:
@@ -386,6 +413,7 @@ for areaScheme, method in zip(areaSchemes, methods):
                     parsedArea.ByRevitArea(method, area)
                     # add it to the area total for the level
                     levelTotal.AddAreas(parsedArea)
+                    levelBlank.AddAreas(parsedArea)
                     # add the matched area to the list of areas
                     levelAreas.append(parsedArea)
                 except Exception as e:
@@ -393,6 +421,7 @@ for areaScheme, method in zip(areaSchemes, methods):
 
         # add all the areas from the level to the list
         levelAreas.append(levelTotal)
+        levelAreas.append(levelBlank)
         # create a dictionary of area names so we can merge areas
         areaNames = set([area.Name for area in levelAreas])
         areaNames = list(areaNames)
@@ -411,20 +440,21 @@ for areaScheme, method in zip(areaSchemes, methods):
         joinedAreas.sort(key = lambda x: x.Sort)
         sectionStartRow = row
         # remove areas that don't get listed out
+        itemizedAreas = []
         for num, area in enumerate(joinedAreas):
             areaIn = area.ItemizeCheck()
-            if not areaIn:
-                joinedAreas.pop(num)
-        for num, area in enumerate(joinedAreas):
-            (joinedAreas[num]).RowNumber = row
-            sectionEndRow = row
+            if area.ItemizeCheck():
+                itemizedAreas.append(area)
+        for num, area in enumerate(itemizedAreas):
+            (itemizedAreas[num]).RowNumber = row
+            sectionEndRow = row - 1
             row = row + 1
             if area.AreaType == "Total":
-                (joinedAreas[num]).SectionStartRow = sectionStartRow
+                (itemizedAreas[num]).SectionStartRow = sectionStartRow
                 sectionStartRow = row
-        for num, area in enumerate(joinedAreas):
-            (joinedAreas[num]).SectionEndRow = sectionEndRow
-        schemeAreas.extend(joinedAreas)
+        for num, area in enumerate(itemizedAreas):
+            (itemizedAreas[num]).SectionEndRow = sectionEndRow
+        schemeAreas.extend(itemizedAreas)
         #% End Level Loop %#
 
     # Go through all the collected areas and build the rows for the excel doc
@@ -432,8 +462,7 @@ for areaScheme, method in zip(areaSchemes, methods):
         schemeRows.append(area.MakeRow(method, row))
 
     # add the grand total loop
-    schemeRows.append(areaCalcArea.GrandTotal(method, firstRow, row))
+    schemeRows.extend(areaCalcArea.GrandTotal(method, firstRow, row))
     outList.append(schemeRows)
 #% End Scheme Loop %#
-TaskDialog.Show("BOMA 2017 Export", "Export Complete")
 OUT = outList
