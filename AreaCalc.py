@@ -14,7 +14,7 @@ doc = DocumentManager.Instance.CurrentDBDocument
 
 areaSchemes = IN[0]
 methods = IN[1]
-if not isinstance(list, methods):
+if not isinstance(methods, list):
     methods = [methods]
 for num, method in enumerate(methods):
     if not method:
