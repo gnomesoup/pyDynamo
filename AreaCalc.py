@@ -3,6 +3,9 @@ import clr
 clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import *
 
+clr.AddReference('RevitAPIUI')
+from Autodesk.Revit.UI import TaskDialog
+
 clr.AddReference('RevitServices')
 import RevitServices
 from RevitServices.Persistence import DocumentManager
@@ -10,10 +13,10 @@ from RevitServices.Persistence import DocumentManager
 doc = DocumentManager.Instance.CurrentDBDocument
 
 areaSchemes = IN[0]
-method = IN[1]
+methods = IN[1]
 if not isinstance(list, methods):
     methods = [methods]
-for num, method in enumerate(method):
+for num, method in enumerate(methods):
     if not method:
         methods[num] = "A"
     elif method not in ["A", "B"]:
@@ -355,7 +358,7 @@ levels = [level.Name.ToString() for level in levels]
 
 ##!! Create the rows for the excel export !!##
 # loop through area schemes
-for areaScheme, method in zip(areaSchemes, method):
+for areaScheme, method in zip(areaSchemes, methods):
     schemeAreas = []
     # get excel header and setup the row numbering
     schemeRows = areaCalcArea.Header(method)
@@ -409,7 +412,8 @@ for areaScheme, method in zip(areaSchemes, method):
         sectionStartRow = row
         # remove areas that don't get listed out
         for num, area in enumerate(joinedAreas):
-            if not area.ItemizeCheck():
+            areaIn = area.ItemizeCheck()
+            if not areaIn:
                 joinedAreas.pop(num)
         for num, area in enumerate(joinedAreas):
             (joinedAreas[num]).RowNumber = row
@@ -431,5 +435,5 @@ for areaScheme, method in zip(areaSchemes, method):
     schemeRows.append(areaCalcArea.GrandTotal(method, firstRow, row))
     outList.append(schemeRows)
 #% End Scheme Loop %#
-
+TaskDialog.Show("BOMA 2017 Export", "Export Complete")
 OUT = outList
