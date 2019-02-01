@@ -381,6 +381,20 @@ levels = FilteredElementCollector(doc).OfClass(Level).ToElements()
 levels = sorted(levels, key = lambda x: x.Elevation)
 levels = [level.Name.ToString() for level in levels]
 
+validAreaTypes = set(["major vertical penetations",
+                      "parking area",
+                      "occupant storage",
+                      "tenant area",
+                      "tenant ancillary area"
+                      "floor service area",
+                      "building amenity area",
+                      "building service area",
+                      "inter-building amentity area",
+                      "inter-building service area",
+                      "base building circulation"])
+
+OUT = validAreaTypes
+
 ##!! Create the rows for the excel export !!##
 # loop through area schemes
 for areaScheme, method in zip(areaSchemes, methods):
