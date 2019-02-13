@@ -57,9 +57,10 @@ class areaCalcArea():
         self.AreaType = revitArea.GetParameters("Area Calc")[0].AsString()
 
         # Check for major verticals
-        if self.AreaType == "Major Vertical Penetration":
+        if (self.AreaType == "Major Vertical Penetrations" or
+            self.AreaType == "Major Vertical Penetration"):
             self.Exclusion = self.Area
-            self.Name = "MAJOR VERTICAL PENETRATION"
+            self.Name = "MAJOR VERTICAL PENETRATIONS"
             self.Sort = 3
         # Check for exclusions
         elif (self.AreaType == "Storage" or
@@ -74,8 +75,6 @@ class areaCalcArea():
         elif self.AreaType == "Building Amenity Area":
             if method == "A":
                 self.Amenity = self.Area
-            else:
-                self.Exclusion = self.Area
 
         # Check for building service areas. This is only required for Method A
         elif (method == "A" and self.AreaType == "Building Service Area"):
@@ -381,19 +380,19 @@ levels = FilteredElementCollector(doc).OfClass(Level).ToElements()
 levels = sorted(levels, key = lambda x: x.Elevation)
 levels = [level.Name.ToString() for level in levels]
 
-validAreaTypes = set(["major vertical penetations",
+validAreaTypes = set(["major vertical penetrations",
                       "parking area",
-                      "occupant storage",
+                      "occupant storage area",
                       "tenant area",
-                      "tenant ancillary area"
+                      "tenant ancillary area",
                       "floor service area",
+                      "unenclosed building feature",
                       "building amenity area",
                       "building service area",
                       "inter-building amentity area",
                       "inter-building service area",
                       "base building circulation"])
-
-OUT = validAreaTypes
+invalidAreaTypes = set()
 
 ##!! Create the rows for the excel export !!##
 # loop through area schemes
@@ -430,8 +429,11 @@ for areaScheme, method in zip(areaSchemes, methods):
                     levelBlank.AddAreas(parsedArea)
                     # add the matched area to the list of areas
                     levelAreas.append(parsedArea)
+                    if parsedArea.AreaType.lower() not in validAreaTypes:
+                        invalidAreaTypes.add(parsedArea.AreaType)
                 except Exception as e:
                     schemeAreas.append(e)
+                    TaskDialog.Show("ERROR", e)
 
         # add all the areas from the level to the list
         levelAreas.append(levelTotal)
@@ -440,7 +442,7 @@ for areaScheme, method in zip(areaSchemes, methods):
         areaNames = set([area.Name for area in levelAreas])
         areaNames = list(areaNames)
         joinedAreas = dict.fromkeys(areaNames)
-        # loop through the diction area and merge any areas that
+        # loop through the dictionary area and merge any areas that
         # have the same name
         for name in joinedAreas.keys():
             for area in levelAreas:
@@ -479,4 +481,11 @@ for areaScheme, method in zip(areaSchemes, methods):
     schemeRows.extend(areaCalcArea.GrandTotal(method, firstRow, row))
     outList.append(schemeRows)
 #% End Scheme Loop %#
+if invalidAreaTypes:
+    message = "The following area types are invalid. Please use standard BOMA 2017 area types.\n"
+    for areaType in invalidAreaTypes:
+        message = message + "\n" + areaType
+    message = message + "\n"
+    TaskDialog.Show("Invalid Area Types", message)
+
 OUT = outList
