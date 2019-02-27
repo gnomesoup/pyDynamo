@@ -49,6 +49,7 @@ class areaCalcArea():
         self.RowNumber = None
         self.SectionStartRow = None
         self.SectionEndRow = None
+        self.BaseBuildingCirculationAlert = False
     def ByRevitArea(self, method, revitArea):
         self.Name = revitArea.GetParameters("Name")[0].AsString()
         self.Number = revitArea.Number.ToString()
@@ -88,8 +89,9 @@ class areaCalcArea():
             self.Ancillary = self.Area
         else:
             self.Ancillary = 0
-        if (self.AreaType == "Base Building Circulation" or
-            self.AreaType == "Floor Service Area"):
+        if self.AreaType == "Base Building Circulation":
+            if method == "A":
+                self.BaseBuildingCirculationAlert = True
             self.Circulation = self.Area
             self.Sort = 2
         else:
@@ -381,8 +383,11 @@ levels = sorted(levels, key = lambda x: x.Elevation)
 levels = [level.Name.ToString() for level in levels]
 
 validAreaTypes = set(["major vertical penetrations",
+                      "major vertical penetration",
                       "parking area",
+                      "parking",
                       "occupant storage area",
+                      "storage",
                       "tenant area",
                       "tenant ancillary area",
                       "floor service area",
@@ -393,6 +398,7 @@ validAreaTypes = set(["major vertical penetrations",
                       "inter-building service area",
                       "base building circulation"])
 invalidAreaTypes = set()
+baseBuildingCirculationAlert = False
 
 ##!! Create the rows for the excel export !!##
 # loop through area schemes
@@ -431,9 +437,11 @@ for areaScheme, method in zip(areaSchemes, methods):
                     levelAreas.append(parsedArea)
                     if parsedArea.AreaType.lower() not in validAreaTypes:
                         invalidAreaTypes.add(parsedArea.AreaType)
+                    if parsedArea.BaseBuildingCirculationAlert:
+                        baseBuildingCirculationAlert = True
                 except Exception as e:
                     schemeAreas.append(e)
-                    TaskDialog.Show("ERROR", e)
+                    # TaskDialog.Show("ERROR", area.GetParameters("Name")[0].AsString())
 
         # add all the areas from the level to the list
         levelAreas.append(levelTotal)
@@ -482,10 +490,15 @@ for areaScheme, method in zip(areaSchemes, methods):
     outList.append(schemeRows)
 #% End Scheme Loop %#
 if invalidAreaTypes:
-    message = "The following area types are invalid. Please use standard BOMA 2017 area types.\n"
+    message = "Please use standard BOMA 2017 Space Classifications. The following area types are invalid:\n"
     for areaType in invalidAreaTypes:
         message = message + "\n" + areaType
-    message = message + "\n"
-    TaskDialog.Show("Invalid Area Types", message)
+    message = message + "\nRefer to table in S:\\03 AREACALC\\BOMA 2017\\WHA - Area Fill Color Scheme for BOMA 2017.pdf for allowable classifications."
+    TaskDialog.Show("Invalid Space Classification", message)
+    outList = "ERROR! Invalid Space Cassifications"
 
+if baseBuildingCirculationAlert:
+    message = "'Scheme A' does not allow for Space Classification of 'Base Building Circulation'"
+    TaskDialog.Show("Invalid Space Classification", message)
+    outList = "ERROR! Base Building Circulation is invalid for Scheme A"
 OUT = outList
