@@ -24,18 +24,20 @@ outList = []
 
 TransactionManager.Instance.EnsureInTransaction(doc)
 
-for familySymbol, placementPoint, parameterValue in zip(familySymbols, parameterValues):
-    for note in notes:
-        location = XYZ(note[4], note[5], 0)
-        element = doc.Create.NewFamilyInstance(location, familySymbol, view)
-        pList = []
-        for parameterName, value in zip(parameterNames, parameterValues):
+for familySymbol, placementPoint, lineValues in zip(familySymbols, placementPoints, parameterValues):
+    location = XYZ(placementPoint.X, placementPoint.Y, placementPoint.Z)
+    element = doc.Create.NewFamilyInstance(location, familySymbol, view)
+    pList = []
+    try:
+        for parameterName, value in zip(parameterNames, lineValues):
             parameter = element.LookupParameter(parameterName)
             if not isinstance(value, str):
                 value = str(value)
             parameter.Set(value)
             pList.append(parameterName + ":" + value)
         outList.append(element)
+    except Exception as e:
+        outList.append(e)
 
 TransactionManager.Instance.TransactionTaskDone()
 
