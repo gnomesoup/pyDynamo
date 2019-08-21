@@ -24,37 +24,54 @@ filePaths = IN[0]
 if not isinstance(filePaths, list):
     filePaths = [filePaths]
 
-elementType = IN[1]
-regex = IN[2]
+elementTypes = IN[1]
+if not isinstance(elementTypes, list):
+    elementTypes = [elementTypes]
+parameterNames = IN[2]
+if not isinstance(parameterNames, list):
+    parameterNames = [parameterNames]
+regexs = IN[3]
+if not isinstance(regexs, list):
+    regexs = [regexs]
+run = IN[4]
 
 outList = []
 
 openOptions = OpenOptions()
 openOptions.DetachFromCentralOption = DetachFromCentralOption.DetachAndPreserveWorksets
 
-for f in filePaths:
-    if File.Exists(f):
-        try:
+if run:
+    for f in filePaths:
+        if File.Exists(f):
             modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(f)
             sourceDoc = app.OpenDocumentFile(modelPath, openOptions)
-            collector = FilteredElementCollector(sourceDoc)
-            elements = collector.OfClass(elementType)
-            copyElementIds = []
-            for element in elements:
-                # if re.search(regex, element.Name):
-                if re.match(regex, element.LookupParameter("Type Name").AsString()):
-                    # outList.append(element)
-                    copyElementIds.append(element.Id)
-        except Exception, exception:
-            outList.append(exception)
-        try:
-            TransactionManager.Instance.EnsureInTransaction(doc)
-            ElementTransformUtils.CopyElements(sourceDoc, List[ElementId](copyElementIds), doc, None, CopyPasteOptions())
-            TransactionManager.Instance.TransactionTaskDone()
-            sourceDoc.Close(False)
-        except Exception, exception:
-            outList.append(exception)
-    else:
-        outList.append("File does not exist: " + f)
+            for elementType, parameterName, regex in zip(elementTypes, parameterNames, regexs):
+                collector = FilteredElementCollector(sourceDoc)
+                try:
+                    elements = collector.OfClass(elementType)
+                    copyElementIds = []
+                    for element in elements:
+                        if parameterName:
+                            elementParameter = element.LookupParameter(parameterName)
+                            if elementParameter is not None:
+                                if re.search(regex, elementParameter.AsString()):
+                                    copyElementIds.append(element.Id)
+                        else:
+                            copyElementIds.append(element.Id)
+                    TransactionManager.Instance.EnsureInTransaction(doc)
+                    copiedIds = ElementTransformUtils.CopyElements(sourceDoc, List[ElementId](copyElementIds), doc, None, CopyPasteOptions())
+                    TransactionManager.Instance.TransactionTaskDone()
+                    copiedElements = []
+                    for copiedId in copiedIds:
+                        copiedElements.append(doc.GetElement(copiedId))
+                    outList.append(copiedElements)
+                    # outList.append(copiedElements)
+                except Exception, exception:
+                    outList.append(copyElementIds)
+            # sourceDoc.Close(False)
+        else:
+            outList.append("File does not exist: " + f)
+else:
+    outList.append("Set run to \"true\"")
 
 OUT = outList
