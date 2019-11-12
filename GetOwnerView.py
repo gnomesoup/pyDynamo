@@ -35,7 +35,7 @@ for element in elements:
         if not viewId:
             outList.append(error)
         else:
-            outList.append(viewId)
+            outList.append(doc.GetElement(viewId))
     else:
         outList.append(ownerView)
 
