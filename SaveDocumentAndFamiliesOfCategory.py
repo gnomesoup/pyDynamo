@@ -26,6 +26,8 @@ if not isinstance(filePaths, list):
 run = IN[2]
 
 def SaveFamiliesOfCategory(doc, run):
+    # Function to save the families of the categories specified in the project information
+    # of the document
     elements = []
     familyList = []
     docPath = doc.PathName
@@ -38,6 +40,7 @@ def SaveFamiliesOfCategory(doc, run):
     else:
         categories = doc.Settings.Categories
         category = categories.get_Item(category)
+
     collector = FilteredElementCollector(doc).OfClass(Family)
     for family in collector:
         if family.FamilyCategoryId.ToString() == category.Id.ToString():
