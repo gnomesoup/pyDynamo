@@ -67,6 +67,8 @@ for name, number, location in zip(names, numbers, locations):
         area = doc.Create.NewArea(view, UV(location.X, location.Y))
         area.Name = name
         area.Number = number
+        tag = doc.Create.NewAreaTag(view, area, UV(location.X, location.Y))
+        tag.HasLeader = False
         outList.append(area)
     except Exception, exception:
         outList.append(exception)
