@@ -22,23 +22,28 @@ for path in paths:
         # Workbook 
         workbook = ex.Workbooks.Open(path)
         # WorkSheet
-        ws = workbook.Worksheets[1]
-        # Cell range
-        rowCollection = None
-        data = ws.UsedRange
-        for row in data.Rows:
-            if rowCollection is None:
-                rowCollection = ["Department"]
-            else:
-                rowCollection = [ws.Name]
-            allNull = True
-            for column in row.Columns:
-                value = column.Value2
-                if value is not None:
-                    allNull = False
-                rowCollection.append(column.Value2)
-            if not allNull:
-                wsCollection.append(rowCollection)
+        ws = workbook.Worksheets
+        for sheet in ws:
+            sheetCollection = []
+            # Cell range
+            rowCollection = None
+            data = sheet.UsedRange
+            for row in data.Rows:
+                if rowCollection is None:
+                    rowCollection = ["Department"]
+                else:
+                    rowCollection = [sheet.Name]
+                allNull = True
+                for column in row.Columns:
+                    value = column.Value2
+                    if value is not None:
+                        allNull = False
+                    rowCollection.append(column.Value2)
+                if not allNull:
+                    sheetCollection.append(rowCollection)
+            Marshal.ReleaseComObject(sheet)
+            if sheetCollection:
+                wsCollection.append(sheetCollection)
         ex.ActiveWorkbook.Close(False)
         Marshal.ReleaseComObject(ws)
         Marshal.ReleaseComObject(workbook)
